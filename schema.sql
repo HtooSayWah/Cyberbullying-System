@@ -22,10 +22,10 @@ ALTER TABLE ONLY users ALTER COLUMN id SET DEFAULT nextval('users_id_seq'::regcl
 
 CREATE TABLE IF NOT EXISTS posts (
     id integer NOT NULL,
-    user_id character varying,
+    user_id integer NOT NULL,
     user_name character varying,
-    user_pic character varying,
     post_time timestamp without time zone,
+    post_body character varying,
     is_bullying boolean DEFAULT false,
     bullying_words character varying[] DEFAULT array[]::varchar[]
 );

@@ -10,6 +10,8 @@ from tornado.httpserver import HTTPServer
 from tornado.httpclient import AsyncHTTPClient
 import tornado.options as Options
 
+from classification import classification
+
 Options.define("port", default=5000, help="run on the given port", type=int)
 
 class HomeHandler(web.RequestHandler):
@@ -107,7 +109,7 @@ class PostHandler(web.RequestHandler):
         })
 
     async def ban_user(self, user_id):
-        await self.database.execute("UPDATE users SET banned = True WHERE user_id = '{}'".format(user_id))
+        await self.database.execute("UPDATE users SET banned = True WHERE id="+str(user_id))
 
     async def fetch_total_bulling_post_of_user(self, user_id):
         cursor = await self.database.execute(
@@ -138,8 +140,7 @@ class PostHandler(web.RequestHandler):
                 self.write({'success': False, 'total_bullying_post_count': total_bullying_post_count})
             else:
                 # TODO: TOEI ADD CLASSIFACTION
-                # bullying_words = 
-                bullying_words = []
+                bullying_words = classification(post_body)
                 is_bullying = len(bullying_words) != 0
 
                 # Ban user

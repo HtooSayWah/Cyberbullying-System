@@ -10,9 +10,9 @@ def FileInitiation():
     wList = []
     stop_wordList = []
     bullyList = []
-    fopen1 = open("./wordlist.txt", encoding = 'utf8')
-    fopen2 = open("./stop_words.txt", encoding = 'utf8')
-    fopen3 = open("./bullywords.txt", encoding = 'utf8')
+    fopen1 = open("./words_lists/wordlist.txt", encoding = 'utf8')
+    fopen2 = open("./words_lists/stop_words.txt", encoding = 'utf8')
+    fopen3 = open("./words_lists/bullywords.txt", encoding = 'utf8')
     
     wList.extend([t.strip() for t in fopen1.readlines()])
     wList.extend([t.strip() for t in fopen2.readlines()])

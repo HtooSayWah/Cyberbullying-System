@@ -1,5 +1,11 @@
 certifi==2018.11.29
 Momoko==2.2.5.1
+nltk==3.4
+numpy==1.15.4
 psycopg2==2.7.6.1
 psycopg2-binary==2.7.6.1
+scikit-learn==0.20.1
+scipy==1.1.0
+singledispatch==3.4.0.3
+six==1.12.0
 tornado==5.1.1

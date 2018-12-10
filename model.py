@@ -7,10 +7,10 @@ import random
 
 #file declaration
 def FileInitiation():
-    with open("./bullywords.txt", encoding = "utf-8-sig") as f: w = f.readlines()
+    with open("./words_lists/bullywords.txt", encoding = "utf-8-sig") as f: w = f.readlines()
     wlist = [i.strip() for i in w]
 
-    ccorpus =open("./stopword_removed_segmented_file.txt", encoding = "utf-8-sig")
+    ccorpus =open("./words_lists/stopword_removed_segmented_file.txt", encoding = "utf-8-sig")
     corpuslist = ccorpus.readlines()
     corpus = [i.strip() for i in corpuslist]
     return wlist,corpus

@@ -3,6 +3,7 @@
 import os
 import psycopg2
 import momoko
+import json
 from tornado import gen, web, auth, escape
 from tornado.ioloop import IOLoop
 from tornado.httpserver import HTTPServer
@@ -87,8 +88,8 @@ class LoginHandler(web.RequestHandler, auth.FacebookGraphMixin):
     # is_bullying boolean DEFAULT false,
     # bullying_words character varying[] DEFAULT array[]::varchar[]
 
-POST_CREATE_QUERY = ("INSERT INTO posts (user_id, user_name, user_pic, post_time, post_body, is_bullying, bullying_words) "
-    "VALUES (%s, %s, %s, TO_TIMESTAMP(%s), %s, %s, %s)")
+POST_CREATE_QUERY = ("INSERT INTO posts (user_id, user_facebook_id, user_name, user_pic, post_time, post_body, is_bullying, bullying_words) "
+    "VALUES (%s, %s, %s, %s, TO_TIMESTAMP(%s), %s, %s, %s)")
 
 class PostHandler(web.RequestHandler):
     def initialize(self, database):
@@ -96,12 +97,13 @@ class PostHandler(web.RequestHandler):
 
     async def find_user_by_facebook_id(self, facebook_id):
         cursor = await self.database.execute(
-            "SELECT * FROM users WHERE facebook_id = '{}'".format(facebook_id))
+            "SELECT id, facebook_id, user_name, user_pic FROM users WHERE facebook_id = '{}'".format(facebook_id))
         user = cursor.fetchone()
         return ({
             'id': user[0],
             'facebook_id': user[1],
             'user_name': user[2],
+            'user_pic': user[3]
         })
 
     async def ban_user(self, user_id):
@@ -112,20 +114,20 @@ class PostHandler(web.RequestHandler):
             "SELECT COUNT(id) FROM posts WHERE is_bullying = True AND user_id = '{}'".format(user_id))
         return cursor.fetchone()[0]
 
-    async def create_post(self, user_id, user_name, user_pic, post_time, post_body, is_bullying, bullying_words):
+    async def create_post(self, user_id, user_facebook_id, user_name, user_pic, post_time, post_body, is_bullying, bullying_words):
         await self.database.execute(
             POST_CREATE_QUERY, 
-            (user_id, user_name, user_pic, post_time, post_body, is_bullying, bullying_words))
+            (user_id, user_facebook_id, user_name, user_pic, post_time, post_body, is_bullying, bullying_words))
 
     async def post(self):
         try:
             body = escape.json_decode(self.request.body)
 
-            facebook_id = body['loginId']
+            user_facebook_id = body['loginId']
             post_body = body['post']
             post_time = body['timestamp']
 
-            user = await self.find_user_by_facebook_id(facebook_id)
+            user = await self.find_user_by_facebook_id(user_facebook_id)
             user_id = user['id']
             user_name = user['user_name']
             user_pic = user['user_pic']
@@ -144,7 +146,8 @@ class PostHandler(web.RequestHandler):
                 if is_bullying and total_bullying_post_count == 2:
                     await self.ban_user(user_id)
 
-                await self.create_post(user_id, user_name, user_pic, post_time, post_body, is_bullying, bullying_words)
+                await self.create_post(
+                    user_id, user_facebook_id, user_name, user_pic, post_time, post_body, is_bullying, bullying_words)
 
                 self.write({'success': True, 'total_bullying_post_count': total_bullying_post_count})
 
@@ -156,7 +159,39 @@ class PostHandler(web.RequestHandler):
         self.finish()
 
 
+class FeedHandler(web.RequestHandler):
+    def initialize(self, database):
+        self.database = database
 
+    async def fetch_all_posts(self):
+        cursor = await self.database.execute(
+            "SELECT id, user_facebook_id, user_name, user_pic, post_body, is_bullying, bullying_words, post_time FROM posts")
+        allposts = []
+        # return cursor.fetchall()
+        for post in cursor.fetchall():
+            allposts.append({
+                'id': post[0],
+                'loginId': post[1],
+                'username': post[2],
+                'userpic': post[3],
+                'post': post[4],
+                'isBully': post[5],
+                'bullyWords': post[6],
+                'postedTime': post[7].strftime('%-I:%M %p'),
+                })
+        return allposts;
+        
+    async def get(self):
+        try:
+           allposts = await self.fetch_all_posts();
+           # self.write(json.dump(allposts))
+           self.write({'posts': allposts})
+        except (psycopg2.Warning, psycopg2.Error) as e:
+            self.set_status(400)
+            self.write({'success': False})
+            print(str(e))
+
+        self.finish()
 
 if __name__ == '__main__':
     Options.parse_command_line()
@@ -172,7 +207,7 @@ if __name__ == '__main__':
         (r'/login', LoginHandler, dict(database=database)),
         (r'/register', LoginHandler, dict(database=database)),
         (r'/post', PostHandler, dict(database=database)),
-        # (r'/feed', FeedHandler, dict(database=database)),
+        (r'/feed', FeedHandler, dict(database=database)),
     ], debug=True)
 
 
